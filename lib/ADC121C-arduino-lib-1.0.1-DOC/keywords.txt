@@ -1,0 +1,22 @@
+ADC121C	KEYWORD1
+
+begin	KEYWORD2
+readConversion	KEYWORD2
+getLowLimit	KEYWORD2
+setLowLimit	KEYWORD2
+getHighLimit	KEYWORD2
+setHighLimit	KEYWORD2
+getALertHyst	KEYWORD2
+setAlertHyst	KEYWORD2
+getLowConv	KEYWORD2
+setLowConv	KEYWORD2
+getHighConv	KEYWORD2
+setHighConv	KEYWORD2
+getAlertStatus	KEYWORD2
+setAlertStatus	KEYWORD2
+setPolarity	KEYWORD2
+setAlertPinEnable	KEYWORD2
+setAlertFlagEnable	KEYWORD2
+setAlertHold	KEYWORD2
+setCycleTime	KEYWORD2
+checkConfig	KEYWORD2
