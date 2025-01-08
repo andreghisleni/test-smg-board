@@ -64,6 +64,10 @@ void setup() {
   charger.reset();
   delay(500);  // give the charger time to reboot
 
+  pinMode(SOLENOIDE_PIN, OUTPUT);
+
+  digitalWrite(SOLENOIDE_PIN, LOW);
+
 }
  
 void loop() {
