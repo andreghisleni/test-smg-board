@@ -1,133 +1,132 @@
-#include <Arduino.h>
 
-#define SDA_PIN 13
-#define SCL_PIN 27
+#include "settings.h"
 
-#define SOLENOIDE_PIN 32
-#define SOLENOIDE_FALT 33
+extern void verificaddisparo();
+extern void sendOldLeituras();
+extern void setupMQTT();
+extern void startMqttLoop();
 
+void inicialPins();
+void startSerial();
+void startWifi();
+void setLoops();
 
-#define ADC_ADDR 0x50
+int estadoBotao = 0;
+unsigned long tempoInicio = 0;
+bool botaoPressionado = false;
 
-/*
-const int ledPinGreen = 21;
-const int ledPinRed = 25;
+void setup()
+{
+  inicialPins();
 
-#include <BQ25792_Driver.h>
-#include <string.h>
+  startSerial();
 
-#define SDA_PIN 32
-#define SCL_PIN 27
-#define STAT_LED 15
+  SPIFFS.begin(true);
 
-BQ25792 charger(0, 0);
+  // if (digitalRead(buttonPin) == LOW)
+  // {
+  //   Serial.println("Resetando configurações");
+  //   SPIFFS.format();
+  //   Serial.println("Reiniciando em 15 segundos");
+  //   delay(15000);
+  //   ESP.restart();
+  // }
 
-void setup() {
-  // put your setup code here, to run once:
-  pinMode(ledPinGreen, OUTPUT);
-  pinMode(ledPinRed, OUTPUT);
+  tempoInicio = millis(); // Registra o tempo de início
 
-  analogWrite(ledPinGreen, 255);
-  Serial.begin(115200);
-  Serial.println("Hello World");
-  
-}
+  while (millis() - tempoInicio < 5000) { // Verifica por 5 segundos
+    analogWrite(ledPinGreen, 0); // Liga o LED verde
+    analogWrite(ledPinRed, 255); // Desliga o LED vermelho
+    estadoBotao = digitalRead(buttonPin);
+    if (estadoBotao == LOW) { // Botão pressionado
+      botaoPressionado = true; // Marca que o botão foi pressionado
+    }
+    delay(10); // Pequeno delay para evitar leituras muito rápidas
+  }
 
-void loop() {
-  // put your main code here, to run repeatedly:
-  Serial.println("Hello World 2");
-  delay(1000);
-  analogWrite(ledPinGreen, 0);
-  analogWrite(ledPinRed, 255);
-  delay(1000);
-  analogWrite(ledPinGreen, 255);
-  analogWrite(ledPinRed, 0);
-  delay(1000);
-  analogWrite(ledPinGreen, 127);
-  analogWrite(ledPinRed, 127);
-  delay(1000);
-}*/
+  if (botaoPressionado) {
+    Serial.println("Botão pressionado durante a inicialização!");
+    // Coloque aqui a ação desejada
+    analogWrite(ledPinGreen, 255); // Desliga o LED verde
+    analogWrite(ledPinRed, 0); // Liga o LED vermelho
+    Serial.println("Resetando configurações");
+    SPIFFS.format();
+    Serial.println("Reiniciando em 15 segundos");
+    delay(5000);
+    analogWrite(ledPinGreen, 130); // Desliga o LED verde
+    analogWrite(ledPinRed, 130); // Liga o LED vermelho
+    delay(5000);
+    analogWrite(ledPinGreen, 0); // Desliga o LED verde
+    analogWrite(ledPinRed, 0); // Liga o LED vermelho
+    delay(5000);
+    analogWrite(ledPinGreen, 130); // Desliga o LED verde
+    analogWrite(ledPinRed, 130); // Liga o LED vermelho
+    ESP.restart();
+  } else {
+    Serial.println("Botão não pressionado durante a inicialização.");
+  }
 
-#include <string.h>
-#include <Wire.h>
-#include <BQ25792_Driver.h>
-#include <ADC121C.h>
+  Serial.println("Inicialização concluída."); // Mensagem de fim da verificação
 
+  // pinMode(2, OUTPUT);
+  // digitalWrite(2, HIGH);
+  // delay(5000);
+  // digitalWrite(2, LOW);
 
-BQ25792 charger(0, 0);
+  Serial.println("Iniciando");
 
-ADC121C adc(ADC_ADDR);
+  // setFile("/settings.json", "SSID", "null");
+  // setFile("/settings.json", "WIFI_PASS", "null");
 
-const int ledPinGreen =  25;
-const int ledPinRed = 21;
- 
-void setup() {
-  Wire.begin(SDA_PIN, SCL_PIN);
+  settingsData = getFile("/settings.json");
 
-  pinMode(ledPinGreen, OUTPUT);
-  pinMode(ledPinRed, OUTPUT);
+  startWifi();
 
-  analogWrite(ledPinGreen, 255);
+  if (!needConfiguration)
+  {
+    // sendOldLeituras();
 
+    delay(1000);
 
-  adc.begin(Wire);
-  Serial.begin(115200);
-  // start Charger
-  charger.reset();
-  delay(500);  // give the charger time to reboot
+    Serial.println("Iniciado");
 
-  pinMode(SOLENOIDE_PIN, OUTPUT);
-  pinMode(SOLENOIDE_FALT, INPUT);
+    // StaticJsonDocument<200> response = httpPostRequest("Vazamento", 0);
 
-}
- 
-void loop() {
+    // serializeJson(response, Serial);
 
+    // delay(1000);
 
+    boolean goToNextStep = httpPostRequestFirstConnection();
 
-  digitalWrite(SOLENOIDE_PIN, HIGH);
+    if (!goToNextStep)
+    {
 
-  Serial.printf("Status: %s     Cells: %.1d     Max Voltage: %.5f     MinVoltage: %.1f     VBat: %.5f     Sensor: %.5f Solenoide Falt: %d \n",
-   charger.getChargeStatus(), 
-   charger.getCellCount(), 
-   charger.getChargeVoltageLimit(), 
-   charger.getVSYSMIN(), 
-   charger.getVBAT(), 
-   adc.readConversion(),
-   digitalRead(SOLENOIDE_FALT)
-  );
+      Serial.println("Erro ao conectar com o servidor, controladora não configurada");
+      Serial.println("Reiniciando em 15 segundos");
 
-  if(digitalRead(SOLENOIDE_FALT)){
+      delay(15000);
+
+      ESP.restart();
+    }
+
+    Serial.println("Conectado com o servidor");
+
     analogWrite(ledPinGreen, 255);
-  } else {
+    analogWrite(ledPinRed, 0);
 
-    analogWrite(ledPinRed, 255);
+    // connect to mqtt
+    setupMQTT();
+    startMqttLoop();
+
+    // verificaddisparo();
+
+    delay(2000);
+
+    setLoops();
   }
+}
 
-
-  // Inicia a comunicação com o ADC
-  Wire.beginTransmission(ADC_ADDR);
-  Wire.write(0x00); // Endereço do registrador de resultado da conversão
-  Wire.endTransmission();
-
-  // Solicita os dados do ADC
-  Wire.requestFrom(ADC_ADDR, 2); // Solicita 2 bytes de dados
-
-  // Lê os bytes de dados e combina em um valor de 12 bits
-  if (Wire.available() == 2) {
-    uint8_t byteHigh = Wire.read();
-    uint8_t byteLow = Wire.read();
-    uint16_t adcValue = ((byteHigh << 8) | byteLow) >> 4; // Desloca 4 bits para a direita para obter o valor de 12 bits
-
-    // Imprime o valor lido
-    Serial.print("Valor do sensor: ");
-    Serial.println(adcValue);
-  } else {
-    Serial.println("Erro ao ler do ADC.");
-  }
-  
-  Serial.println(
-   digitalRead(SOLENOIDE_FALT));
-  
-  delay(1000);
+void loop()
+{
+  LoopWifi();
 }
